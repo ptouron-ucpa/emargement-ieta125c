@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IETA125C — Émargement en ligne</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+:root {
+  --ink:     #111111;
+  --paper:   #f7f4ef;
+  --cream:   #ede8df;
+  --gold:    #b8963e;
+  --gold-lt: #f0e4c2;
+  --red:     #b53a2f;
+  --red-lt:  #faeae8;
+  --green:   #1e5e3a;
+  --green-lt:#e4f2ea;
+  --slate:   #3b4a5a;
+  --muted:   #7a7268;
+  --rule:    #d8d2c8;
+  --white:   #ffffff;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Instrument Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  font-size: 15px;
+}
+
+/* ── Header ── */
+.masthead {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0 2rem;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--gold);
+}
+.masthead-left { display: flex; align-items: baseline; gap: 1rem; }
+.masthead-left .eyebrow {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.masthead-left h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.masthead-right { display: flex; align-items: center; gap: 1rem; }
+.masthead-date {
+  font-size: 0.7rem;
+  color: #888;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: 0.06em;
+}
+.btn-admin-trigger {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: var(--paper);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.btn-admin-trigger:hover { border-color: var(--gold); background: rgba(184,150,62,0.12); }
+
+/* ── Layout ── */
+.shell { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+/* ── Progress bar ── */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 2.5rem;
+}
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+.progress-step:last-child { flex: none; }
+.step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--rule);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+.step-dot.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.step-dot.done { border-color: var(--green); background: var(--green); color: #fff; }
+.step-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.step-label.active { color: var(--ink); font-weight: 600; }
+.step-connector {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+  margin: 0 0.5rem;
+}
+
+/* ── Card ── */
+.card {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 2rem 2rem 1.8rem;
+  margin-bottom: 1.2rem;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gold);
+}
+.card-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 1.6rem;
+}
+.card-heading-icon {
+  width: 36px; height: 36px;
+  background: var(--gold-lt);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.card-heading h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.card-heading p {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+/* ── Form ── */
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+.field label {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.field input, .field select, .field textarea {
+  border: 1.5px solid var(--rule);
+  border-radius: 2px;
+  padding: 0.6rem 0.85rem;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 0.88rem;
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--slate);
+  box-shadow: 0 0 0 3px rgba(59,74,90,0.08);
+  background: var(--white);
+}
+.field input.error { border-color: var(--red); }
+
+/* ── Session grid ── */
+.session-list { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.5rem; }
+.session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+  border: 1.5px solid var(--rule);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.18s;
+  background: var(--paper);
+  position: relative;
+}
+.session-item:hover { border-color: var(--slate); background: var(--white); }
+.session-item.selected { border-color: var(--slate); background: var(--white); box-shadow: 0 0 0 3px rgba(59,74,90,0.1); }
+.session-item.signed-present { border-color: var(--green); background: var(--green-lt); cursor: default; }
+.session-item.signed-absent { border-color: var(--red); background: var(--red-lt); cursor: default; }
+.session-item.today { border-color: var(--gold); }
+
+.session-left { display: flex; align-items: center; gap: 1rem; }
+.session-day-badge {
+  width: 44px; height: 44px;
+  background: var(--cream);
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.session-day-badge .day-abbr {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.session-day-badge .day-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+}
+.session-info .session-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.session-info .session-sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 0.12rem;
+}
+.session-badge {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+}
+.badge-today { background: var(--gold-lt); color: var(--gold); }
+.badge-signed { background: var(--green-lt); color: var(--green); }
+.badge-absent { background: var(--red-lt); color: var(--red); }
+.badge-past   { background: var(--cream); color: var(--muted); }
+
+/* ── Presence toggle ── */
+.toggle-presence {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1.5px solid var(--rule);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 1.4rem;
+}
+.toggle-presence button {
+  padding: 0.75rem;
+  border: none;
+  cursor: pointer;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--paper);
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.toggle-presence button + button { border-left: 1.5px solid var(--rule); }
+.toggle-presence .t-present.on { background: var(--green); color: #fff; }
+.toggle-presence .t-absent.on  { background: var(--red);   color: #fff; }
+
+/* ── Canvas ── */
+.canvas-zone {
+  border: 1.5px dashed var(--rule);
+  border-radius: 2px;
+  background: var(--paper);
+  position: relative;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+#sigCanvas {
+  display: block;
+  width: 100%;
+  height: 170px;
+  cursor: crosshair;
+  touch-action: none;
+}
+.canvas-watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  gap: 0.3rem;
+}
+.canvas-watermark span {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rule);
+}
+.canvas-watermark .sig-icon { font-size: 1.6rem; opacity: 0.35; }
+.btn-erase {
+  position: absolute;
+  bottom: 0.6rem;
+  right: 0.7rem;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid var(--rule);
+  color: var(--muted);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+.btn-erase:hover { color: var(--ink); border-color: var(--ink); }
+
+/* ── Absence motifs ── */
+.motifs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+}
+.motif-chip {
+  border: 1.5px solid var(--rule);
+  border-radius: 2px;
+  background: var(--paper);
+  padding: 0.65rem 0.4rem;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.motif-chip:hover { border-color: var(--muted); background: var(--white); }
+.motif-chip.on { border-color: var(--red); background: var(--red-lt); }
+.motif-chip .motif-em { font-size: 1.1rem; display: block; margin-bottom: 0.2rem; }
+.motif-chip .motif-lbl {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+}
+.motif-chip.on .motif-lbl { color: var(--red); }
+
+/* ── File upload ── */
+.drop-zone {
+  border: 1.5px dashed var(--rule);
+  border-radius: 2px;
+  padding: 1.2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 1rem;
+  background: var(--paper);
+}
+.drop-zone:hover { border-color: var(--slate); background: var(--white); }
+.drop-zone.has-file { border-color: var(--green); background: var(--green-lt); }
+.drop-zone .dz-icon { font-size: 1.4rem; margin-bottom: 0.3rem; }
+.drop-zone p { font-size: 0.72rem; color: var(--muted); font-family: 'Syne', sans-serif; letter-spacing: 0.05em; }
+.drop-zone .file-name { font-size: 0.78rem; color: var(--green); font-weight: 600; margin-top: 0.2rem; }
+#fileInput { display: none; }
+
+/* ── Info banner ── */
+.info-band {
+  background: var(--gold-lt);
+  border-left: 3px solid var(--gold);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.2rem;
+  font-size: 0.75rem;
+  color: #7a5f1a;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.warn-band {
+  background: var(--red-lt);
+  border-left: 3px solid var(--red);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.2rem;
+  font-size: 0.75rem;
+  color: #7a1a1a;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+/* ── Primary button ── */
+.btn-primary {
+  display: block;
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 2px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 0.5rem;
+}
+.btn-primary:hover { background: var(--slate); }
+.btn-primary:active { transform: scale(0.99); }
+.btn-primary:disabled { background: var(--rule); color: var(--muted); cursor: not-allowed; }
+.btn-primary.green { background: var(--green); }
+.btn-primary.green:hover { background: #174d2e; }
+
+/* ── Success state ── */
+.success-card {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+.success-icon { font-size: 3rem; margin-bottom: 1rem; }
+.success-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.6rem;
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+.success-sub { font-size: 0.8rem; color: var(--muted); }
+
+/* ── Feedback message ── */
+#feedbackZone { min-height: 1rem; margin-bottom: 0.5rem; }
+.fb { padding: 0.7rem 1rem; font-size: 0.75rem; border-radius: 2px; font-family: 'Syne', sans-serif; letter-spacing: 0.04em; }
+.fb-err { background: var(--red-lt); color: var(--red); border-left: 3px solid var(--red); }
+.fb-ok  { background: var(--green-lt); color: var(--green); border-left: 3px solid var(--green); }
+.fb-inf { background: var(--gold-lt); color: #7a5f1a; border-left: 3px solid var(--gold); }
+
+/* ══════════════ ADMIN ══════════════ */
+#adminView { display: none; }
+.admin-top {
+  background: var(--slate);
+  color: var(--paper);
+  padding: 0 2rem;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--gold);
+}
+.admin-top h2 { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.08em; }
+.btn-logout {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: var(--paper);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-logout:hover { border-color: var(--gold); color: var(--gold); }
+
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; margin-bottom: 2rem; }
+.kpi {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 1.1rem 1rem;
+  text-align: center;
+}
+.kpi .kpi-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.kpi .kpi-lbl {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 0.3rem;
+}
+.kpi.kpi-green .kpi-val { color: var(--green); }
+.kpi.kpi-red   .kpi-val { color: var(--red); }
+.kpi.kpi-gold  .kpi-val { color: var(--gold); }
+
+/* Tabs */
+.tab-bar { display: flex; border-bottom: 2px solid var(--rule); margin-bottom: 1.5rem; gap: 0; }
+.tab-btn {
+  padding: 0.6rem 1.3rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.18s;
+}
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--gold); }
+.tab-btn:hover:not(.active) { color: var(--ink); }
+
+/* Table */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.65rem 1rem;
+  text-align: left;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--cream); }
+tbody tr:hover { background: #faf8f5; }
+tbody td { padding: 0.65rem 1rem; font-size: 0.82rem; }
+.pill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pill-p { background: var(--green-lt); color: var(--green); }
+.pill-a { background: var(--red-lt);   color: var(--red); }
+.pill-j { background: var(--gold-lt);  color: #7a5f1a; }
+.pill-nj{ background: #ffeaea; color: var(--red); font-weight: 800; }
+.pill-v { background: var(--green-lt); color: var(--green); }
+.btn-val {
+  background: var(--green);
+  color: #fff;
+  border: none;
+  padding: 0.22rem 0.55rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.btn-val:hover { background: #174d2e; }
+
+/* Filters */
+.filter-strip {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filter-strip select, .filter-strip input {
+  border: 1.5px solid var(--rule);
+  border-radius: 2px;
+  padding: 0.45rem 0.7rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.68rem;
+  background: var(--white);
+  outline: none;
+}
+.filter-strip select:focus, .filter-strip input:focus { border-color: var(--slate); }
+.btn-export {
+  margin-left: auto;
+  background: var(--gold);
+  color: var(--ink);
+  border: none;
+  border-radius: 2px;
+  padding: 0.45rem 1rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-export:hover { background: #c8a84b; }
+
+/* Student config rows */
+.stu-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr 1.8fr auto;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+.stu-row input {
+  border: 1.5px solid var(--rule);
+  border-radius: 2px;
+  padding: 0.42rem 0.65rem;
+  font-size: 0.8rem;
+  font-family: 'Instrument Sans', sans-serif;
+  background: var(--paper);
+  outline: none;
+  width: 100%;
+}
+.stu-row input:focus { border-color: var(--slate); }
+.btn-del {
+  background: var(--red-lt);
+  color: var(--red);
+  border: 1.5px solid var(--red);
+  border-radius: 2px;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+.btn-del:hover { background: var(--red); color: #fff; }
+
+.absence-alert-card {
+  border: 1.5px solid var(--red);
+  border-radius: 3px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.8rem;
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.alert-info .alert-name { font-weight: 600; font-size: 0.9rem; }
+.alert-info .alert-num  { font-family: 'Syne', sans-serif; font-size: 0.62rem; color: var(--muted); margin-left: 0.4rem; }
+.alert-info .alert-detail { font-size: 0.72rem; color: var(--red); margin-top: 0.2rem; font-family: 'Syne', sans-serif; letter-spacing: 0.04em; }
+.alert-info .alert-emp  { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; }
+.btn-relance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  padding: 0.45rem 0.9rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.btn-relance:hover { background: #8f2d24; }
+
+/* Modal */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(17,17,17,0.65);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.overlay.open { display: flex; }
+.modal-box {
+  background: var(--white);
+  border-top: 4px solid var(--gold);
+  padding: 2rem;
+  width: 360px;
+  max-width: 92vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-box h3 { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; }
+.modal-box p { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.2rem; }
+.modal-actions { display: flex; gap: 0.7rem; margin-top: 1.5rem; }
+.btn-confirm {
+  flex: 1; padding: 0.72rem; background: var(--slate); color: #fff;
+  border: none; font-family: 'Syne', sans-serif; font-size: 0.7rem;
+  font-weight: 700; letter-spacing: 0.1em; cursor: pointer;
+  text-transform: uppercase; border-radius: 2px;
+}
+.btn-confirm:hover { background: var(--ink); }
+.btn-cancel-modal {
+  flex: 1; padding: 0.72rem; background: none; color: var(--ink);
+  border: 2px solid var(--ink); font-family: 'Syne', sans-serif;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+  cursor: pointer; text-transform: uppercase; border-radius: 2px;
+}
+
+/* Config section */
+.cfg-section { background: var(--white); border: 1px solid var(--rule); border-radius: 3px; padding: 1.5rem; margin-bottom: 1.2rem; position: relative; overflow: hidden; }
+.cfg-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gold); }
+.cfg-title { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1.2rem; }
+.cfg-hint { font-size: 0.72rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.5; }
+.cfg-hint code { background: var(--cream); padding: 0.1rem 0.35rem; border-radius: 2px; font-size: 0.68rem; }
+
+@media (max-width: 600px) {
+  .field-row { grid-template-columns: 1fr; }
+  .motifs-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-row { grid-template-columns: 1fr 1fr; }
+  .stu-row { grid-template-columns: 1fr 1fr; }
+  .masthead-date { display: none; }
+  .progress-step .step-label { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     VUE ÉLÈVE
+══════════════════════════════════════════ -->
+<div id="studentView">
+
+  <div class="masthead">
+    <div class="masthead-left">
+      <span class="eyebrow">IETA125C</span>
+      <h1>Émargement en ligne</h1>
+    </div>
+    <div class="masthead-right">
+      <span class="masthead-date" id="dateDisp"></span>
+      <button class="btn-admin-trigger" onclick="openAdminModal()">Admin ↗</button>
+    </div>
+  </div>
+
+  <div class="shell">
+
+    <!-- Progress -->
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-step">
+        <div class="step-dot active" id="dot1">1</div>
+        <span class="step-label active" id="lbl1">Identification</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="progress-step">
+        <div class="step-dot" id="dot2">2</div>
+        <span class="step-label" id="lbl2">Session</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="progress-step">
+        <div class="step-dot" id="dot3">3</div>
+        <span class="step-label" id="lbl3">Signature</span>
+      </div>
+    </div>
+
+    <div id="feedbackZone"></div>
+
+    <!-- ─── ÉTAPE 1 : Identification ─── -->
+    <div id="step1">
+      <div class="card">
+        <div class="card-heading">
+          <div class="card-heading-icon">👤</div>
+          <div>
+            <h2>Identification</h2>
+            <p>Saisissez votre nom et votre numéro étudiant</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Nom de famille</label>
+            <input type="text" id="fNom" placeholder="ex : Dupont" autocomplete="family-name">
+          </div>
+          <div class="field">
+            <label>Numéro étudiant</label>
+            <input type="text" id="fNum" placeholder="ex : IETA-007" autocomplete="off"
+              onkeydown="if(event.key==='Enter')identifyStudent()">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="identifyStudent()">Continuer →</button>
+      </div>
+    </div>
+
+    <!-- ─── ÉTAPE 2 : Choix session ─── -->
+    <div id="step2" style="display:none">
+      <div class="card">
+        <div class="card-heading">
+          <div class="card-heading-icon">📅</div>
+          <div>
+            <h2>Choisissez la session</h2>
+            <p id="welcomeMsg"></p>
+          </div>
+        </div>
+        <div class="session-list" id="sessionList"></div>
+        <div id="noSessionMsg" style="display:none">
+          <div class="info-band">
+            <span>ℹ️</span>
+            <span>Aucune session de formation disponible actuellement (vacances scolaires ou week-end). Prochain jeudi ou vendredi hors vacances.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ÉTAPE 3 : Signature / Absence ─── -->
+    <div id="step3" style="display:none">
+      <div class="card">
+        <div class="card-heading">
+          <div class="card-heading-icon" id="step3Icon">✍️</div>
+          <div>
+            <h2 id="step3Title">Émargement</h2>
+            <p id="step3Sub"></p>
+          </div>
+        </div>
+
+        <!-- Toggle présent/absent -->
+        <div class="toggle-presence">
+          <button class="t-present on" id="tPresent" onclick="setMode('present')">✓ Je suis présent(e)</button>
+          <button class="t-absent"    id="tAbsent"  onclick="setMode('absent')">✗ Je suis absent(e)</button>
+        </div>
+
+        <!-- Section présence -->
+        <div id="secPresence">
+          <p style="font-size:0.73rem;color:var(--muted);margin-bottom:0.7rem;font-family:'Syne',sans-serif;letter-spacing:0.04em;">
+            Signez dans le cadre ci-dessous avec votre doigt ou votre souris :
+          </p>
+          <div class="canvas-zone">
+            <canvas id="sigCanvas"></canvas>
+            <div class="canvas-watermark" id="canvasWm">
+              <span class="sig-icon">✍</span>
+              <span>Signez ici</span>
+            </div>
+            <button class="btn-erase" onclick="clearSig()">Effacer</button>
+          </div>
+        </div>
+
+        <!-- Section absence -->
+        <div id="secAbsence" style="display:none">
+          <p style="font-size:0.73rem;color:var(--muted);margin-bottom:0.8rem;font-family:'Syne',sans-serif;letter-spacing:0.04em;">
+            Sélectionnez le motif :
+          </p>
+          <div class="motifs-grid">
+            <div class="motif-chip" onclick="pickMotif(this,'Maladie')">
+              <span class="motif-em">🤒</span><span class="motif-lbl">Maladie</span>
+            </div>
+            <div class="motif-chip" onclick="pickMotif(this,'Raison familiale')">
+              <span class="motif-em">👨‍👩‍👧</span><span class="motif-lbl">Famille</span>
+            </div>
+            <div class="motif-chip" onclick="pickMotif(this,'Problème de transport')">
+              <span class="motif-em">🚇</span><span class="motif-lbl">Transport</span>
+            </div>
+            <div class="motif-chip" onclick="pickMotif(this,'Convocation officielle')">
+              <span class="motif-em">📋</span><span class="motif-lbl">Convocation</span>
+            </div>
+            <div class="motif-chip" onclick="pickMotif(this,'Autre motif')">
+              <span class="motif-em">📌</span><span class="motif-lbl">Autre</span>
+            </div>
+            <div class="motif-chip" id="chipSansJustif" onclick="pickMotif(this,'Sans justificatif')">
+              <span class="motif-em">⚠️</span><span class="motif-lbl">Sans justif.</span>
+            </div>
+          </div>
+
+          <!-- Upload justificatif -->
+          <div id="secUpload" style="display:none">
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+              <div class="dz-icon">📎</div>
+              <p>Cliquez pour joindre votre justificatif</p>
+              <p style="margin-top:0.2rem;font-size:0.62rem;">(PDF, JPG, PNG — 5 Mo max)</p>
+              <div class="file-name" id="fileName"></div>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="onFileChange(this)">
+          </div>
+
+          <div id="warnNoJustif" class="warn-band" style="display:none">
+            <span>⚠️</span>
+            <span>Absence sans justificatif — votre employeur sera notifié immédiatement et une alerte sera transmise au formateur.</span>
+          </div>
+
+          <div class="field" style="margin-bottom:1rem;">
+            <label>Commentaire (facultatif)</label>
+            <textarea id="fComment" rows="2" placeholder="Précisions éventuelles…"></textarea>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btnSubmit" onclick="submitForm()">
+          Valider mon émargement
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── Succès ─── -->
+    <div id="stepDone" style="display:none">
+      <div class="card success-card">
+        <div class="success-icon" id="doneIcon">✅</div>
+        <div class="success-title" id="doneTitle">Émargement validé</div>
+        <p class="success-sub" id="doneSub"></p>
+        <button class="btn-primary" style="max-width:260px;margin:1.5rem auto 0" onclick="resetStudent()">
+          Retour à l'accueil
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /shell -->
+</div><!-- /studentView -->
+
+
+<!-- ══════════════════════════════════════════
+     VUE ADMIN
+══════════════════════════════════════════ -->
+<div id="adminView">
+  <div class="admin-top">
+    <h2>📊 Tableau de bord — Formateur · IETA125C</h2>
+    <button class="btn-logout" onclick="logout()">Déconnexion ✕</button>
+  </div>
+  <div class="shell">
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi kpi-green"><div class="kpi-val" id="kPresent">0</div><div class="kpi-lbl">Présences</div></div>
+      <div class="kpi kpi-red">  <div class="kpi-val" id="kAbsent">0</div> <div class="kpi-lbl">Absences</div></div>
+      <div class="kpi kpi-gold"> <div class="kpi-val" id="kJustif">0</div> <div class="kpi-lbl">Justifiées</div></div>
+      <div class="kpi">          <div class="kpi-val" id="kTotal">0</div>  <div class="kpi-lbl">Total</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="adminTab('presence',this)">Présences</button>
+      <button class="tab-btn"        onclick="adminTab('absences',this)">Absences non justifiées</button>
+      <button class="tab-btn"        onclick="adminTab('config',this)">Configuration</button>
+    </div>
+
+    <!-- Présences -->
+    <div id="tabPresence">
+      <div class="filter-strip">
+        <select id="fDate" onchange="renderTable()">
+          <option value="">Toutes les dates</option>
+        </select>
+        <select id="fStatus" onchange="renderTable()">
+          <option value="">Tous statuts</option>
+          <option value="present">Présent</option>
+          <option value="absent">Absent</option>
+        </select>
+        <input type="text" id="fSearch" placeholder="Rechercher…" oninput="renderTable()" style="min-width:140px;">
+        <button class="btn-export" onclick="exportCSV()">⬇ Exporter CSV</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Élève</th>
+                <th>N° Étudiant</th>
+                <th>Date</th>
+                <th>Créneau</th>
+                <th>Statut</th>
+                <th>Justificatif</th>
+                <th>Heure</th>
+                <th>Validation</th>
+              </tr>
+            </thead>
+            <tbody id="tBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Absences non justifiées -->
+    <div id="tabAbsences" style="display:none">
+      <div class="card">
+        <div class="card-heading">
+          <div class="card-heading-icon">⚠️</div>
+          <div><h2>Absences non justifiées</h2><p>Liste des absences sans justificatif transmis</p></div>
+        </div>
+        <div id="alertList"></div>
+      </div>
+    </div>
+
+    <!-- Config -->
+    <div id="tabConfig" style="display:none">
+
+      <!-- EmailJS -->
+      <div class="cfg-section">
+        <div class="cfg-title">🔌 Configuration EmailJS</div>
+        <p class="cfg-hint">
+          Créez un compte gratuit sur <strong>emailjs.com</strong>, ajoutez un service email (Gmail, Outlook…) 
+          et créez un template avec les variables suivantes :<br>
+          <code>{{eleve_nom}}</code> <code>{{num_etudiant}}</code> <code>{{date_session}}</code> 
+          <code>{{motif}}</code> <code>{{justificatif}}</code> <code>{{commentaire}}</code> <code>{{alerte}}</code>
+        </p>
+        <div class="field-row">
+          <div class="field"><label>Public Key (User ID)</label>
+            <input type="text" id="cfgPk" placeholder="ex: AbCdEfGhIjKlMn"></div>
+          <div class="field"><label>Service ID</label>
+            <input type="text" id="cfgSvc" placeholder="ex: service_xxxxxxx"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Template ID — Absence</label>
+            <input type="text" id="cfgTpl" placeholder="ex: template_xxxxxxx"></div>
+          <div class="field"><label>Email du formateur (copie CC)</label>
+            <input type="email" id="cfgEmailF" placeholder="formateur@centre.fr"></div>
+        </div>
+        <button class="btn-primary" onclick="saveCfg()" style="max-width:200px">Sauvegarder</button>
+      </div>
+
+      <!-- Élèves -->
+      <div class="cfg-section">
+        <div class="cfg-title">👥 Liste des élèves</div>
+        <p class="cfg-hint">
+          Renseignez ici les élèves et l'email de leur employeur. 
+          Ces informations permettent l'authentification et l'envoi automatique des notifications d'absence.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1.4fr 1fr 1.8fr auto;gap:0.5rem;margin-bottom:0.5rem;">
+          <span style="font-family:'Syne',sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);">Nom</span>
+          <span style="font-family:'Syne',sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);">Prénom</span>
+          <span style="font-family:'Syne',sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);">N° Étudiant</span>
+          <span style="font-family:'Syne',sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);">Email Employeur</span>
+          <span></span>
+        </div>
+        <div id="stuRows"></div>
+        <div style="display:flex;gap:0.7rem;margin-top:1rem;flex-wrap:wrap;">
+          <button class="btn-primary" onclick="addStu()" style="max-width:200px;background:var(--slate)">+ Ajouter un élève</button>
+          <button class="btn-primary" onclick="saveStu()" style="max-width:200px">Sauvegarder</button>
+        </div>
+      </div>
+
+      <!-- Mot de passe -->
+      <div class="cfg-section">
+        <div class="cfg-title">🔑 Mot de passe administrateur</div>
+        <div class="field-row">
+          <div class="field"><label>Nouveau mot de passe</label>
+            <input type="password" id="cfgPwd1" placeholder="••••••••"></div>
+          <div class="field"><label>Confirmation</label>
+            <input type="password" id="cfgPwd2" placeholder="••••••••"></div>
+        </div>
+        <button class="btn-primary" onclick="changePwd()" style="max-width:200px">Modifier</button>
+        <div id="pwdMsg" style="margin-top:0.6rem;font-size:0.75rem;"></div>
+      </div>
+
+    </div><!-- /tabConfig -->
+  </div><!-- /shell admin -->
+</div><!-- /adminView -->
+
+
+<!-- ══ MODAL Admin Login ══ -->
+<div class="overlay" id="overlay">
+  <div class="modal-box">
+    <h3>Accès formateur</h3>
+    <p>Entrez le mot de passe pour accéder au tableau de bord.</p>
+    <div class="field">
+      <label>Mot de passe</label>
+      <input type="password" id="modalPwd" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')checkPwd()">
+    </div>
+    <div id="modalErr" style="margin-top:0.6rem;font-size:0.72rem;color:var(--red);font-family:'Syne',sans-serif;"></div>
+    <div class="modal-actions">
+      <button class="btn-confirm" onclick="checkPwd()">Connexion</button>
+      <button class="btn-cancel-modal" onclick="closeModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ═══════════════════════════════════════════
+//   STORAGE & STATE
+// ═══════════════════════════════════════════
+const KEY = 'ieta125c_';
+let S = {
+  sigs:     [],   // records
+  students: [],   // {nom, prenom, numEtudiant, employeurEmail}
+  cfg: { pk:'', svc:'', tpl:'', emailF:'' },
+  pwd: 'formation2024'
+};
+
+function persist() {
+  try {
+    localStorage.setItem(KEY+'sigs',     JSON.stringify(S.sigs));
+    localStorage.setItem(KEY+'students', JSON.stringify(S.students));
+    localStorage.setItem(KEY+'cfg',      JSON.stringify(S.cfg));
+    localStorage.setItem(KEY+'pwd',      S.pwd);
+  } catch(e) {}
+}
+function hydrate() {
+  try {
+    const s = localStorage.getItem(KEY+'sigs');     if(s) S.sigs     = JSON.parse(s);
+    const t = localStorage.getItem(KEY+'students'); if(t) S.students = JSON.parse(t);
+    const c = localStorage.getItem(KEY+'cfg');      if(c) S.cfg      = JSON.parse(c);
+    const p = localStorage.getItem(KEY+'pwd');      if(p) S.pwd      = p;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════
+//   SESSIONS (jeudi + vendredi hors vacances zone C)
+// ═══════════════════════════════════════════
+const VACS = [
+  ['2024-10-19','2024-11-04'],['2024-12-21','2025-01-06'],
+  ['2025-02-15','2025-03-03'],['2025-04-12','2025-04-28'],
+  ['2025-07-05','2025-09-01'],['2025-10-18','2025-11-03'],
+  ['2025-12-20','2026-01-06'],['2026-02-14','2026-03-02'],
+  ['2026-04-11','2026-04-27'],['2026-07-04','2026-09-01'],
+].map(([a,b])=>[new Date(a),new Date(b)]);
+
+function isVac(d) { return VACS.some(([a,b])=>d>=a&&d<b); }
+
+function buildSessions() {
+  // Returns up to 6 sessions: today's + 5 past (for late signing)
+  const res = [];
+  const todayStr = toISO(new Date());
+  let d = new Date(); d.setHours(0,0,0,0);
+  let tries = 0;
+  while (res.length < 7 && tries < 100) {
+    const dow = d.getDay();
+    if ((dow === 4 || dow === 5) && !isVac(d)) {
+      const iso = toISO(d);
+      const dayFr = dow===4 ? 'Jeudi':'Vendredi';
+      // afternoon first if today and after noon
+      const h = new Date().getHours();
+      const sessions = [
+        { date:iso, day:dayFr, slot:'Matin',      key:'M', hours:'08h30 – 12h30' },
+        { date:iso, day:dayFr, slot:'Après-midi', key:'A', hours:'13h30 – 17h30' },
+      ];
+      sessions.forEach(s => { s.isToday = iso===todayStr; res.unshift(s); });
+    }
+    d.setDate(d.getDate()-1);
+    tries++;
+  }
+  return res.slice(0,8); // max 8 slots displayed
+}
+
+function toISO(d) { return d.toISOString().split('T')[0]; }
+function sessId(s) { return `${s.date}_${s.key}`; }
+function alreadySigned(sid) {
+  return S.sigs.find(r=>r.sid===sid && r.numEtudiant===CUR.numEtudiant);
+}
+
+// ═══════════════════════════════════════════
+//   CURRENT STUDENT STATE
+// ═══════════════════════════════════════════
+let CUR = { nom:'', numEtudiant:'', prenom:'', employeurEmail:'' };
+let SEL = null;   // selected session
+let MODE = 'present';
+let MOTIF = null;
+let FILE = null;
+let DRAWN = false;
+
+// ═══════════════════════════════════════════
+//   INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  hydrate();
+  // init EmailJS
+  if (S.cfg.pk) { try { emailjs.init(S.cfg.pk); } catch(e){} }
+  // date
+  document.getElementById('dateDisp').textContent =
+    new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+});
+
+// ═══════════════════════════════════════════
+//   STEP 1 — IDENTIFY
+// ═══════════════════════════════════════════
+function identifyStudent() {
+  const nom = document.getElementById('fNom').value.trim();
+  const num = document.getElementById('fNum').value.trim();
+  if (!nom) { feedback('Veuillez saisir votre nom de famille.','err'); document.getElementById('fNom').classList.add('error'); return; }
+  if (!num) { feedback('Veuillez saisir votre numéro étudiant.','err'); document.getElementById('fNum').classList.add('error'); return; }
+  document.getElementById('fNom').classList.remove('error');
+  document.getElementById('fNum').classList.remove('error');
+
+  // match registered student (case-insensitive)
+  const reg = S.students.find(s =>
+    s.numEtudiant.toLowerCase()===num.toLowerCase() &&
+    s.nom.toLowerCase()===nom.toLowerCase()
+  );
+
+  CUR = {
+    nom: nom.toUpperCase(),
+    numEtudiant: num.toUpperCase(),
+    prenom: reg?.prenom || '',
+    employeurEmail: reg?.employeurEmail || ''
+  };
+
+  clearFeedback();
+  go(1,2);
+  buildSessionList();
+}
+
+// ═══════════════════════════════════════════
+//   STEP 2 — SESSION
+// ═══════════════════════════════════════════
+function buildSessionList() {
+  document.getElementById('welcomeMsg').textContent =
+    `Bonjour ${CUR.prenom||CUR.nom} — sélectionnez la demi-journée à émarger.`;
+
+  const sessions = buildSessions();
+  const list = document.getElementById('sessionList');
+  list.innerHTML = '';
+
+  if (!sessions.length) {
+    document.getElementById('noSessionMsg').style.display = 'block';
+    return;
+  }
+
+  sessions.forEach(sess => {
+    const sid = sessId(sess);
+    const signed = alreadySigned(sid);
+    const div = document.createElement('div');
+    div.className = 'session-item' + (sess.isToday?' today':'');
+    if (signed) div.classList.add(signed.status==='present'?'signed-present':'signed-absent');
+
+    const dayParts = new Date(sess.date+'T12:00:00');
+    const dayNum = dayParts.getDate();
+    const monthAbbr = dayParts.toLocaleDateString('fr-FR',{month:'short'});
+    const fullDate = dayParts.toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+    let badge = '';
+    if (signed) {
+      badge = signed.status==='present'
+        ? '<span class="session-badge badge-signed">✓ Signé</span>'
+        : '<span class="session-badge badge-absent">✗ Absent</span>';
+    } else if (sess.isToday) {
+      badge = '<span class="session-badge badge-today">Aujourd\'hui</span>';
+    } else {
+      badge = '<span class="session-badge badge-past">Passé</span>';
+    }
+
+    div.innerHTML = `
+      <div class="session-left">
+        <div class="session-day-badge">
+          <span class="day-abbr">${monthAbbr}</span>
+          <span class="day-num">${dayNum}</span>
+        </div>
+        <div class="session-info">
+          <div class="session-title">${sess.day} ${sess.slot}</div>
+          <div class="session-sub">${fullDate} · ${sess.hours}</div>
+        </div>
+      </div>
+      ${badge}
+    `;
+
+    if (signed) {
+      div.onclick = () => feedback(`Vous avez déjà émargé cette session (${signed.status==='present'?'présent(e)':'absent(e)'}).`,'inf');
+    } else {
+      div.onclick = () => selectSession(sess, div);
+    }
+    list.appendChild(div);
+  });
+}
+
+function selectSession(sess, el) {
+  document.querySelectorAll('.session-item').forEach(i=>i.classList.remove('selected'));
+  el.classList.add('selected');
+  SEL = sess;
+  clearFeedback();
+
+  const dateF = new Date(sess.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'});
+  document.getElementById('step3Sub').textContent = `${dateF} — ${sess.slot} (${sess.hours})`;
+
+  go(2,3);
+  setMode('present');
+  clearSig();
+  MOTIF = null; FILE = null;
+  document.querySelectorAll('.motif-chip').forEach(c=>c.classList.remove('on'));
+  document.getElementById('secUpload').style.display='none';
+  document.getElementById('warnNoJustif').style.display='none';
+  document.getElementById('dropZone').classList.remove('has-file');
+  document.getElementById('fileName').textContent='';
+  document.getElementById('fComment').value='';
+  setTimeout(initCanvas,50);
+}
+
+// ═══════════════════════════════════════════
+//   STEP 3 — SIGN
+// ═══════════════════════════════════════════
+function setMode(mode) {
+  MODE = mode;
+  document.getElementById('tPresent').classList.toggle('on', mode==='present');
+  document.getElementById('tAbsent').classList.toggle('on',  mode==='absent');
+  document.getElementById('secPresence').style.display = mode==='present'?'block':'none';
+  document.getElementById('secAbsence').style.display  = mode==='absent' ?'block':'none';
+  document.getElementById('step3Icon').textContent  = mode==='present'?'✍️':'📋';
+  document.getElementById('step3Title').textContent = mode==='present'?'Signature de présence':'Déclaration d\'absence';
+}
+
+function pickMotif(chip, motif) {
+  document.querySelectorAll('.motif-chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on');
+  MOTIF = motif;
+  const noJustif = motif==='Sans justificatif';
+  document.getElementById('secUpload').style.display     = noJustif?'none':'block';
+  document.getElementById('warnNoJustif').style.display  = noJustif?'flex':'none';
+}
+
+function onFileChange(input) {
+  if (input.files[0]) {
+    FILE = input.files[0];
+    document.getElementById('fileName').textContent = `📎 ${FILE.name}`;
+    document.getElementById('dropZone').classList.add('has-file');
+  }
+}
+
+// ── Canvas ──
+let drawing=false, lx=0, ly=0;
+function initCanvas() {
+  const cv = document.getElementById('sigCanvas');
+  cv.width  = cv.parentElement.offsetWidth;
+  cv.height = 170;
+  const ctx = cv.getContext('2d');
+  ctx.strokeStyle='#111'; ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round';
+  DRAWN=false;
+
+  function pos(e){
+    const r=cv.getBoundingClientRect(), sx=cv.width/r.width, sy=cv.height/r.height;
+    return e.touches
+      ? [(e.touches[0].clientX-r.left)*sx,(e.touches[0].clientY-r.top)*sy]
+      : [(e.clientX-r.left)*sx,(e.clientY-r.top)*sy];
+  }
+  function start(e){ drawing=true; [lx,ly]=pos(e); document.getElementById('canvasWm').style.display='none'; e.preventDefault(); }
+  function move(e){ if(!drawing)return; const [x,y]=pos(e); ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();lx=x;ly=y;DRAWN=true; e.preventDefault(); }
+  function end(e)  { drawing=false; e.preventDefault(); }
+
+  // Remove old listeners by cloning
+  const nv = cv.cloneNode(true);
+  cv.parentNode.replaceChild(nv, cv);
+  const nc = document.getElementById('sigCanvas');
+  nc.getContext('2d').strokeStyle='#111';
+  nc.getContext('2d').lineWidth=2.2;
+  nc.getContext('2d').lineCap='round';
+  nc.getContext('2d').lineJoin='round';
+  nc.addEventListener('mousedown',start); nc.addEventListener('mousemove',move); nc.addEventListener('mouseup',end); nc.addEventListener('mouseleave',end);
+  nc.addEventListener('touchstart',start,{passive:false}); nc.addEventListener('touchmove',move,{passive:false}); nc.addEventListener('touchend',end,{passive:false});
+}
+function clearSig() {
+  const cv=document.getElementById('sigCanvas');
+  cv.getContext('2d').clearRect(0,0,cv.width,cv.height);
+  DRAWN=false;
+  document.getElementById('canvasWm').style.display='flex';
+}
+
+// ── Submit ──
+async function submitForm() {
+  const btn = document.getElementById('btnSubmit');
+  if (MODE==='present' && !DRAWN) { feedback('Veuillez apposer votre signature avant de valider.','err'); return; }
+  if (MODE==='absent'  && !MOTIF) { feedback('Veuillez sélectionner un motif d\'absence.','err'); return; }
+
+  btn.disabled=true; btn.textContent='Enregistrement…';
+
+  const sid = sessId(SEL);
+  const sig  = MODE==='present' ? document.getElementById('sigCanvas').toDataURL('image/png') : '';
+  const hasJ = MODE==='absent' && MOTIF!=='Sans justificatif' && !!FILE;
+
+  const rec = {
+    id: Date.now().toString(),
+    sid,
+    date: SEL.date, day: SEL.day, slot: SEL.slot, hours: SEL.hours,
+    numEtudiant: CUR.numEtudiant,
+    nom: CUR.nom, prenom: CUR.prenom,
+    employeurEmail: CUR.employeurEmail,
+    status: MODE,
+    motif: MODE==='absent'?MOTIF:'',
+    hasJustif: hasJ,
+    fileName: FILE?.name||'',
+    commentaire: document.getElementById('fComment').value.trim(),
+    signatureData: sig,
+    ts: new Date().toISOString(),
+    validated: false
+  };
+  S.sigs.push(rec);
+  persist();
+
+  if (MODE==='absent') await sendEmail(rec);
+
+  // Show success
+  document.getElementById('step3').style.display='none';
+  document.getElementById('stepDone').style.display='block';
+  document.getElementById('doneIcon').textContent  = MODE==='present'?'✅':'📋';
+  document.getElementById('doneTitle').textContent = MODE==='present'?'Présence enregistrée':'Absence déclarée';
+  const dateF = new Date(SEL.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'});
+  document.getElementById('doneSub').textContent   = MODE==='present'
+    ? `Votre signature a été enregistrée pour le ${dateF} — ${SEL.slot}.`
+    : `Votre absence a été enregistrée${CUR.employeurEmail?' et votre employeur a été notifié':''}.`;
+
+  updateStep(3,'done');
+  btn.disabled=false; btn.textContent='Valider mon émargement';
+}
+
+// ═══════════════════════════════════════════
+//   EMAIL (EmailJS)
+// ═══════════════════════════════════════════
+async function sendEmail(rec) {
+  const {pk,svc,tpl,emailF} = S.cfg;
+  if (!pk||!svc||!tpl) { console.warn('EmailJS non configuré'); return; }
+
+  const dateF = new Date(rec.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const params = {
+    to_email:       rec.employeurEmail || emailF,
+    cc_email:       emailF,
+    eleve_nom:      `${rec.prenom} ${rec.nom}`,
+    num_etudiant:   rec.numEtudiant,
+    date_session:   `${dateF} — ${rec.slot} (${rec.hours})`,
+    motif:          rec.motif,
+    justificatif:   rec.hasJustif ? `Oui — fichier joint : ${rec.fileName}` : '⚠️ AUCUN JUSTIFICATIF FOURNI',
+    commentaire:    rec.commentaire || '—',
+    alerte:         rec.motif==='Sans justificatif' ? '⚠️ ABSENCE NON JUSTIFIÉE — ACTION REQUISE' : '',
+    formation:      'IETA125C',
+  };
+
+  try {
+    await emailjs.init(pk);
+    await emailjs.send(svc, tpl, params);
+  } catch(e) { console.warn('EmailJS err:', e); }
+}
+
+// ═══════════════════════════════════════════
+//   STEP NAVIGATION
+// ═══════════════════════════════════════════
+function go(from, to) {
+  document.getElementById('step'+from).style.display='none';
+  document.getElementById('step'+to).style.display='block';
+  updateStep(from,'done');
+  updateStep(to,'active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function updateStep(n, state) {
+  const dot=document.getElementById('dot'+n), lbl=document.getElementById('lbl'+n);
+  dot.classList.remove('active','done'); lbl.classList.remove('active');
+  if(state==='active'){ dot.classList.add('active'); lbl.classList.add('active'); dot.textContent=n; }
+  if(state==='done')  { dot.classList.add('done'); dot.textContent='✓'; }
+}
+function resetStudent() {
+  CUR={nom:'',numEtudiant:'',prenom:'',employeurEmail:''};
+  SEL=null; MODE='present'; MOTIF=null; FILE=null; DRAWN=false;
+  document.getElementById('fNom').value='';
+  document.getElementById('fNum').value='';
+  document.getElementById('stepDone').style.display='none';
+  document.getElementById('step1').style.display='block';
+  ['dot1','dot2','dot3'].forEach(id=>{ const d=document.getElementById(id); d.className='step-dot'; d.textContent=id.replace('dot',''); });
+  ['lbl1','lbl2','lbl3'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('dot1').classList.add('active');
+  document.getElementById('lbl1').classList.add('active');
+  clearFeedback();
+  window.scrollTo({top:0});
+}
+
+// ═══════════════════════════════════════════
+//   FEEDBACK
+// ═══════════════════════════════════════════
+let fbTimer;
+function feedback(msg,type='inf'){
+  clearTimeout(fbTimer);
+  const z=document.getElementById('feedbackZone');
+  z.innerHTML=`<div class="fb fb-${type}">${msg}</div>`;
+  if(type!=='err') fbTimer=setTimeout(clearFeedback,5000);
+}
+function clearFeedback(){ document.getElementById('feedbackZone').innerHTML=''; }
+
+// ═══════════════════════════════════════════
+//   ADMIN
+// ═══════════════════════════════════════════
+function openAdminModal(){ document.getElementById('overlay').classList.add('open'); document.getElementById('modalPwd').value=''; document.getElementById('modalErr').textContent=''; setTimeout(()=>document.getElementById('modalPwd').focus(),100); }
+function closeModal()    { document.getElementById('overlay').classList.remove('open'); }
+function checkPwd() {
+  if (document.getElementById('modalPwd').value===S.pwd) {
+    closeModal();
+    document.getElementById('studentView').style.display='none';
+    document.getElementById('adminView').style.display='block';
+    refreshAdmin();
+  } else {
+    document.getElementById('modalErr').textContent='Mot de passe incorrect.';
+  }
+}
+function logout() {
+  document.getElementById('adminView').style.display='none';
+  document.getElementById('studentView').style.display='block';
+}
+
+function adminTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['tabPresence','tabAbsences','tabConfig'].forEach(id=>document.getElementById(id).style.display='none');
+  if(tab==='presence') { document.getElementById('tabPresence').style.display='block'; renderTable(); }
+  if(tab==='absences') { document.getElementById('tabAbsences').style.display='block'; renderAlerts(); }
+  if(tab==='config')   { document.getElementById('tabConfig').style.display='block'; loadCfg(); renderStuRows(); }
+}
+
+function refreshAdmin() { updateKPIs(); populateDateFilter(); renderTable(); }
+
+function updateKPIs() {
+  const sigs=S.sigs;
+  document.getElementById('kPresent').textContent = sigs.filter(s=>s.status==='present').length;
+  document.getElementById('kAbsent').textContent  = sigs.filter(s=>s.status==='absent').length;
+  document.getElementById('kJustif').textContent  = sigs.filter(s=>s.status==='absent'&&s.hasJustif).length;
+  document.getElementById('kTotal').textContent   = sigs.length;
+}
+
+function populateDateFilter() {
+  const sel=document.getElementById('fDate');
+  const dates=[...new Set(S.sigs.map(s=>s.date))].sort().reverse();
+  sel.innerHTML='<option value="">Toutes les dates</option>'+dates.map(d=>{
+    const f=new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'short'});
+    return `<option value="${d}">${f}</option>`;
+  }).join('');
+}
+
+function renderTable() {
+  const fd=document.getElementById('fDate').value;
+  const fs=document.getElementById('fStatus').value;
+  const fq=document.getElementById('fSearch').value.toLowerCase();
+  let rows=S.sigs.filter(r=>{
+    if(fd&&r.date!==fd)return false;
+    if(fs&&r.status!==fs)return false;
+    if(fq&&!`${r.nom} ${r.prenom} ${r.numEtudiant}`.toLowerCase().includes(fq))return false;
+    return true;
+  }).sort((a,b)=>b.ts.localeCompare(a.ts));
+
+  const tb=document.getElementById('tBody');
+  if(!rows.length){ tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:2rem;font-family:'Syne',sans-serif;font-size:0.75rem;color:var(--muted);">Aucune donnée</td></tr>`; return; }
+
+  tb.innerHTML=rows.map(r=>{
+    const df=new Date(r.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+    const tf=new Date(r.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    let justPill='—';
+    if(r.status==='absent'){
+      if(r.motif==='Sans justificatif') justPill=`<span class="pill pill-nj">⚠ Aucun</span>`;
+      else if(r.hasJustif) justPill=`<span class="pill pill-j">Oui — ${r.fileName||''}</span>`;
+      else justPill=`<span class="pill pill-nj">Non fourni</span>`;
+    }
+    return `<tr>
+      <td><strong>${r.prenom?r.prenom+' ':''}</strong>${r.nom}</td>
+      <td style="font-family:'Syne',sans-serif;font-size:0.68rem;letter-spacing:0.06em;">${r.numEtudiant}</td>
+      <td>${df}</td>
+      <td style="font-size:0.75rem;">${r.slot}</td>
+      <td><span class="pill ${r.status==='present'?'pill-p':'pill-a'}">${r.status==='present'?'Présent':'Absent'}</span></td>
+      <td>${justPill}</td>
+      <td style="font-family:'Syne',sans-serif;font-size:0.68rem;color:var(--muted);">${tf}</td>
+      <td>${r.validated
+        ? '<span class="pill pill-v">✓ Validé</span>'
+        : `<button class="btn-val" onclick="validate('${r.id}')">Valider</button>`
+      }</td>
+    </tr>`;
+  }).join('');
+}
+
+function validate(id) {
+  const r=S.sigs.find(s=>s.id===id); if(!r)return;
+  r.validated=true; persist(); renderTable(); updateKPIs();
+}
+
+function renderAlerts() {
+  const absNJ=S.sigs.filter(r=>r.status==='absent'&&(r.motif==='Sans justificatif'||!r.hasJustif));
+  const el=document.getElementById('alertList');
+  if(!absNJ.length){ el.innerHTML=`<p style="color:var(--green);font-family:'Syne',sans-serif;font-size:0.78rem;">✓ Aucune absence sans justificatif.</p>`; return; }
+  el.innerHTML=absNJ.map(r=>{
+    const df=new Date(r.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'});
+    const mailto=`mailto:${r.employeurEmail||S.cfg.emailF}?subject=Absence non justifiée — ${r.prenom} ${r.nom}&body=Bonjour,%0D%0A%0D%0AL'élève ${r.prenom} ${r.nom} (${r.numEtudiant}) était absent(e) lors de la session du ${df} — ${r.slot} sans justificatif fourni.%0D%0A%0D%0ACordialement`;
+    return `<div class="absence-alert-card">
+      <div class="alert-info">
+        <span class="alert-name">${r.prenom||''} ${r.nom}</span><span class="alert-num">${r.numEtudiant}</span>
+        <div class="alert-detail">⚠ Absence non justifiée · ${df} · ${r.slot}</div>
+        <div class="alert-emp">${r.employeurEmail?'📧 '+r.employeurEmail:'⚠ Email employeur non renseigné'}</div>
+        ${r.commentaire?`<div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">💬 ${r.commentaire}</div>`:''}
+      </div>
+      <a href="${mailto}" class="btn-relance">📧 Relancer</a>
+    </div>`;
+  }).join('');
+}
+
+function exportCSV() {
+  if(!S.sigs.length){alert('Aucune donnée à exporter.');return;}
+  const hdr=['Nom','Prenom','N° Etudiant','Date','Jour','Session','Horaires','Statut','Motif','Justificatif','Fichier','Commentaire','Horodatage','Valide'];
+  const rows=S.sigs.sort((a,b)=>a.date.localeCompare(b.date)||a.slot.localeCompare(b.slot)).map(r=>[
+    r.nom,r.prenom,r.numEtudiant,r.date,r.day,r.slot,r.hours,
+    r.status,r.motif||'',r.hasJustif?'Oui':'Non',r.fileName||'',
+    r.commentaire||'',new Date(r.ts).toLocaleString('fr-FR'),r.validated?'Oui':'Non'
+  ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';'));
+  const csv='\uFEFF'+[hdr.join(';'),...rows].join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`emargement_IETA125C_${toISO(new Date())}.csv`;
+  a.click();
+}
+
+// ── Config ──
+function loadCfg() {
+  document.getElementById('cfgPk').value    = S.cfg.pk    || '';
+  document.getElementById('cfgSvc').value   = S.cfg.svc   || '';
+  document.getElementById('cfgTpl').value   = S.cfg.tpl   || '';
+  document.getElementById('cfgEmailF').value= S.cfg.emailF|| '';
+}
+function saveCfg() {
+  S.cfg={ pk:document.getElementById('cfgPk').value.trim(), svc:document.getElementById('cfgSvc').value.trim(), tpl:document.getElementById('cfgTpl').value.trim(), emailF:document.getElementById('cfgEmailF').value.trim() };
+  if(S.cfg.pk){ try{emailjs.init(S.cfg.pk);}catch(e){} }
+  persist();
+  alert('✓ Configuration sauvegardée.');
+}
+
+// ── Elèves ──
+function renderStuRows() {
+  const el=document.getElementById('stuRows');
+  if(!S.students.length){ el.innerHTML=`<p style="font-family:'Syne',sans-serif;font-size:0.75rem;color:var(--muted);margin-bottom:0.8rem;">Aucun élève enregistré.</p>`; return; }
+  el.innerHTML=S.students.map((s,i)=>`
+    <div class="stu-row">
+      <input type="text"  value="${s.nom}"            placeholder="Nom"          onchange="S.students[${i}].nom=this.value">
+      <input type="text"  value="${s.prenom}"         placeholder="Prénom"       onchange="S.students[${i}].prenom=this.value">
+      <input type="text"  value="${s.numEtudiant}"    placeholder="N° Étudiant"  onchange="S.students[${i}].numEtudiant=this.value">
+      <input type="email" value="${s.employeurEmail}" placeholder="Email employeur" onchange="S.students[${i}].employeurEmail=this.value">
+      <button class="btn-del" onclick="delStu(${i})">✕</button>
+    </div>`).join('');
+}
+function addStu() { S.students.push({nom:'',prenom:'',numEtudiant:'',employeurEmail:''}); renderStuRows(); }
+function delStu(i){ S.students.splice(i,1); renderStuRows(); }
+function saveStu() { persist(); alert(`✓ ${S.students.length} élève(s) sauvegardé(s).`); }
+
+function changePwd() {
+  const p1=document.getElementById('cfgPwd1').value, p2=document.getElementById('cfgPwd2').value;
+  const el=document.getElementById('pwdMsg');
+  if(!p1){ el.style.color=S.cfg.red||'#b53a2f'; el.textContent='Entrez un mot de passe.'; return; }
+  if(p1!==p2){ el.style.color='#b53a2f'; el.textContent='Les mots de passe ne correspondent pas.'; return; }
+  S.pwd=p1; persist();
+  el.style.color='#1e5e3a'; el.textContent='✓ Mot de passe modifié avec succès.';
+  document.getElementById('cfgPwd1').value=''; document.getElementById('cfgPwd2').value='';
+}
+</script>
+</body>
+</html>
