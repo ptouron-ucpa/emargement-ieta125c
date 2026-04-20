@@ -6,6 +6,7 @@
 <title>IETA125C — Émargement en ligne</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
 :root {
   --ink:     #111111;
@@ -965,7 +966,8 @@ tbody td { padding: 0.65rem 1rem; font-size: 0.82rem; }
           <option value="absent">Absent</option>
         </select>
         <input type="text" id="fSearch" placeholder="Rechercher…" oninput="renderTable()" style="min-width:140px;">
-        <button class="btn-export" onclick="exportCSV()">⬇ Exporter CSV</button>
+        <button class="btn-export" onclick="exportCSV()">⬇ CSV</button>
+        <button class="btn-export" onclick="openPdfModal()" style="background:var(--slate);color:var(--paper);">📄 PDF Semaine</button>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
         <div class="tbl-wrap">
@@ -1065,7 +1067,22 @@ tbody td { padding: 0.65rem 1rem; font-size: 0.82rem; }
 </div><!-- /adminView -->
 
 
-<!-- ══ MODAL Admin Login ══ -->
+<!-- ══ MODAL PDF Export ══ -->
+<div class="overlay" id="pdfOverlay">
+  <div class="modal-box" style="width:420px;max-width:95vw;">
+    <h3>Exporter la feuille d'émargement</h3>
+    <p>Choisissez la semaine à exporter. Le PDF contiendra toutes les demi-journées avec les signatures visibles.</p>
+    <div class="field" style="margin-bottom:1rem;">
+      <label>Semaine</label>
+      <select id="pdfWeekSel" style="border:1.5px solid var(--rule);border-radius:2px;padding:0.6rem 0.85rem;font-family:'Instrument Sans',sans-serif;font-size:0.88rem;background:var(--paper);width:100%;outline:none;"></select>
+    </div>
+    <div id="pdfPreview" style="background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:0.8rem;font-size:0.75rem;color:var(--muted);min-height:60px;font-family:'Syne',sans-serif;line-height:1.7;"></div>
+    <div class="modal-actions">
+      <button class="btn-confirm" onclick="generatePDF()">📄 Générer le PDF</button>
+      <button class="btn-cancel-modal" onclick="document.getElementById('pdfOverlay').classList.remove('open')">Annuler</button>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="overlay">
   <div class="modal-box">
     <h3>Accès formateur</h3>
@@ -1603,7 +1620,321 @@ function exportCSV() {
   a.click();
 }
 
-// ── Config ──
+
+// ═══════════════════════════════════════════
+//   PDF EXPORT — Feuille d'émargement hebdomadaire
+// ═══════════════════════════════════════════
+
+function getWeekLabel(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(d.setDate(diff));
+  const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
+  const fmt = (dt) => dt.toLocaleDateString('fr-FR', {day:'2-digit', month:'short'});
+  const wnum = getWeekNumber(monday);
+  return `Semaine ${wnum} — ${fmt(monday)} au ${fmt(friday)} ${friday.getFullYear()}`;
+}
+
+function getWeekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+function getMondayOfWeek(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(d); monday.setDate(diff);
+  return monday.toISOString().split('T')[0];
+}
+
+function openPdfModal() {
+  // Build week list from signatures
+  const weeks = {};
+  S.sigs.forEach(r => {
+    const wk = getMondayOfWeek(r.date);
+    if (!weeks[wk]) weeks[wk] = getWeekLabel(r.date);
+  });
+  // Also add current week
+  const nowWk = getMondayOfWeek(toISO(new Date()));
+  if (!weeks[nowWk]) weeks[nowWk] = getWeekLabel(toISO(new Date()));
+
+  const sel = document.getElementById('pdfWeekSel');
+  sel.innerHTML = Object.entries(weeks).sort((a,b)=>b[0].localeCompare(a[0]))
+    .map(([k,v]) => `<option value="${k}">${v}</option>`).join('');
+
+  sel.onchange = updatePdfPreview;
+  document.getElementById('pdfOverlay').classList.add('open');
+  updatePdfPreview();
+}
+
+function updatePdfPreview() {
+  const monday = document.getElementById('pdfWeekSel').value;
+  if (!monday) return;
+  const friday = new Date(monday + 'T12:00:00'); friday.setDate(friday.getDate() + 4);
+  const fridayStr = friday.toISOString().split('T')[0];
+
+  const sigs = S.sigs.filter(r => r.date >= monday && r.date <= fridayStr);
+  const present = sigs.filter(r => r.status === 'present').length;
+  const absent  = sigs.filter(r => r.status === 'absent').length;
+  const slots   = [...new Set(sigs.map(r => r.date + '_' + r.slot))].length;
+
+  document.getElementById('pdfPreview').innerHTML =
+    sigs.length === 0
+      ? 'Aucune signature pour cette semaine.'
+      : `${slots} demi-journée(s) · ${present} présence(s) · ${absent} absence(s)<br>
+         ${sigs.filter(r=>r.status==='present'&&r.signatureData).length} signature(s) manuscrite(s) incluse(s)`;
+}
+
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const monday = document.getElementById('pdfWeekSel').value;
+  if (!monday) return;
+
+  const friday = new Date(monday + 'T12:00:00'); friday.setDate(friday.getDate() + 4);
+  const fridayStr = friday.toISOString().split('T')[0];
+  const weekLabel = getWeekLabel(monday);
+
+  // Get all sessions of the week sorted
+  const sigs = S.sigs
+    .filter(r => r.date >= monday && r.date <= fridayStr)
+    .sort((a,b) => a.date.localeCompare(b.date) || a.slot.localeCompare(b.slot));
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, margin = 14;
+  let y = 0;
+
+  function addPage() {
+    doc.addPage();
+    y = 20;
+    drawPageHeader();
+  }
+
+  function checkY(needed) {
+    if (y + needed > 275) addPage();
+  }
+
+  function drawPageHeader() {
+    // Thin gold line top
+    doc.setDrawColor(184, 150, 62);
+    doc.setLineWidth(1);
+    doc.line(margin, 12, W - margin, 12);
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.3);
+  }
+
+  // ── Cover / Header ──
+  y = 20;
+  // Logo text
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(17, 17, 17);
+  doc.text('Feuille d\'Émargement', margin, y);
+  y += 7;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(120, 114, 104);
+  doc.text('Formation IETA125C — Centre de formation', margin, y);
+  y += 5;
+  doc.text(weekLabel, margin, y);
+  y += 4;
+
+  // Gold rule
+  doc.setDrawColor(184, 150, 62);
+  doc.setLineWidth(0.8);
+  doc.line(margin, y, W - margin, y);
+  doc.setLineWidth(0.3);
+  doc.setDrawColor(180, 180, 180);
+  y += 5;
+
+  // Summary box
+  const present = sigs.filter(r=>r.status==='present').length;
+  const absent  = sigs.filter(r=>r.status==='absent').length;
+  const njustif = sigs.filter(r=>r.status==='absent'&&!r.hasJustif&&r.motif==='Sans justificatif').length;
+
+  doc.setFillColor(247, 244, 239);
+  doc.roundedRect(margin, y, W - margin*2, 18, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(17,17,17);
+  const colW = (W - margin*2) / 3;
+  doc.text(`${present} Présence(s)`,    margin + colW*0 + colW/2, y+7,  {align:'center'});
+  doc.text(`${absent} Absence(s)`,      margin + colW*1 + colW/2, y+7,  {align:'center'});
+  doc.text(`${njustif} Non justifiée(s)`, margin + colW*2 + colW/2, y+7, {align:'center'});
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(120,114,104);
+  doc.text('signatures validées', margin + colW*0 + colW/2, y+13, {align:'center'});
+  doc.text('déclarées',           margin + colW*1 + colW/2, y+13, {align:'center'});
+  doc.text('sans justificatif',   margin + colW*2 + colW/2, y+13, {align:'center'});
+  y += 24;
+
+  // ── Group by date+slot ──
+  const groups = {};
+  sigs.forEach(r => {
+    const key = r.date + '_' + r.slot;
+    if (!groups[key]) groups[key] = { date:r.date, day:r.day, slot:r.slot, hours:r.hours, rows:[] };
+    groups[key].rows.push(r);
+  });
+
+  Object.values(groups).forEach(group => {
+    const rowH   = 22; // height per student row (with signature space)
+    const headH  = 12;
+    const needed = headH + group.rows.length * rowH + 6;
+    checkY(needed);
+
+    // Session header
+    const dateF = new Date(group.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+    doc.setFillColor(17, 17, 17);
+    doc.roundedRect(margin, y, W - margin*2, 9, 1, 1, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(245, 242, 237);
+    doc.text(`${group.day} ${group.slot}  ·  ${dateF}  ·  ${group.hours||''}`, margin+4, y+6);
+    y += 11;
+
+    // Column headers
+    doc.setFillColor(237, 232, 223);
+    doc.rect(margin, y, W-margin*2, 6, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(90, 85, 78);
+    doc.text('Élève',         margin+3,   y+4.2);
+    doc.text('N° Étudiant',   margin+58,  y+4.2);
+    doc.text('Statut',        margin+90,  y+4.2);
+    doc.text('Heure',         margin+115, y+4.2);
+    doc.text('Signature / Motif', margin+135, y+4.2);
+    y += 7;
+
+    // Student rows
+    group.rows.forEach((r, idx) => {
+      checkY(rowH);
+      const bg = idx % 2 === 0 ? [255,255,255] : [250,248,244];
+      doc.setFillColor(...bg);
+      doc.rect(margin, y, W-margin*2, rowH-1, 'F');
+
+      // Border bottom
+      doc.setDrawColor(220, 214, 204);
+      doc.line(margin, y+rowH-1, W-margin, y+rowH-1);
+
+      const cy = y + (rowH-1)/2;
+
+      // Name
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(17,17,17);
+      const fullName = `${r.prenom||''} ${r.nom}`.trim();
+      doc.text(fullName.substring(0,22), margin+3, cy-1);
+
+      // Num
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(100,96,90);
+      doc.text(r.numEtudiant||'', margin+58, cy-1);
+
+      // Status pill
+      if (r.status === 'present') {
+        doc.setFillColor(30, 94, 58);
+        doc.roundedRect(margin+88, cy-4, 18, 6, 1, 1, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(255,255,255);
+        doc.text('PRÉSENT', margin+97, cy+0.2, {align:'center'});
+      } else {
+        doc.setFillColor(181, 58, 47);
+        doc.roundedRect(margin+88, cy-4, 16, 6, 1, 1, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(255,255,255);
+        doc.text('ABSENT', margin+96, cy+0.2, {align:'center'});
+      }
+
+      // Time
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(120,114,104);
+      doc.text(new Date(r.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), margin+115, cy-1);
+
+      // Signature or motif
+      if (r.status === 'present' && r.signatureData) {
+        try {
+          doc.addImage(r.signatureData, 'PNG', margin+133, y+1, 52, rowH-4);
+        } catch(e) {
+          doc.setFontSize(7); doc.setTextColor(150,145,140);
+          doc.text('Signature enregistrée', margin+135, cy-1);
+        }
+      } else if (r.status === 'absent') {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(7.5);
+        const motifColor = r.motif==='Sans justificatif' ? [181,58,47] : [120,114,104];
+        doc.setTextColor(...motifColor);
+        const motifText = r.motif || 'Absence déclarée';
+        doc.text(motifText.substring(0,28), margin+135, cy-2);
+        if (r.hasJustif) {
+          doc.setFontSize(6.5); doc.setTextColor(30,94,58);
+          doc.text('✓ Justificatif fourni', margin+135, cy+3);
+        }
+        if (r.commentaire) {
+          doc.setFontSize(6.5); doc.setTextColor(150,145,140);
+          doc.text(r.commentaire.substring(0,32), margin+135, cy+7);
+        }
+      }
+
+      y += rowH;
+    });
+
+    // Empty rows for missing students (if students list is set)
+    const signedNums = group.rows.map(r=>r.numEtudiant);
+    const missing = S.students.filter(s => !signedNums.includes(s.numEtudiant));
+    missing.forEach((s, idx) => {
+      checkY(rowH);
+      doc.setFillColor(255, 248, 246);
+      doc.rect(margin, y, W-margin*2, rowH-1, 'F');
+      doc.setDrawColor(220, 214, 204);
+      doc.line(margin, y+rowH-1, W-margin, y+rowH-1);
+      const cy = y + (rowH-1)/2;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(181,58,47);
+      doc.text(`${s.prenom||''} ${s.nom}`.trim().substring(0,22), margin+3, cy-1);
+      doc.setFontSize(7.5); doc.setTextColor(120,114,104);
+      doc.text(s.numEtudiant||'', margin+58, cy-1);
+      doc.setFillColor(240,200,195);
+      doc.roundedRect(margin+88, cy-4, 22, 6, 1, 1, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(181,58,47);
+      doc.text('NON SIGNÉ', margin+99, cy+0.2, {align:'center'});
+      // Signature line
+      doc.setDrawColor(200,195,188); doc.setLineWidth(0.3);
+      doc.line(margin+133, y+rowH-4, margin+185, y+rowH-4);
+      doc.setLineWidth(0.3); doc.setDrawColor(180,180,180);
+      y += rowH;
+    });
+
+    y += 5;
+  });
+
+  // ── Footer on each page ──
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i=1; i<=pageCount; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(184,150,62); doc.setLineWidth(0.5);
+    doc.line(margin, 285, W-margin, 285);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(150,145,140);
+    doc.text(`IETA125C — ${weekLabel}`, margin, 289);
+    doc.text(`Page ${i} / ${pageCount}`, W-margin, 289, {align:'right'});
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`, W/2, 289, {align:'center'});
+  }
+
+  // Download
+  const filename = `emargement_IETA125C_S${getWeekNumber(new Date(monday+'T12:00:00'))}_${monday}.pdf`;
+  doc.save(filename);
+  document.getElementById('pdfOverlay').classList.remove('open');
+}
+
 function loadCfg() {
   document.getElementById('cfgPk').value    = S.cfg.pk    || '';
   document.getElementById('cfgSvc').value   = S.cfg.svc   || '';
