@@ -1298,7 +1298,7 @@ function selectSession(sess, el) {
 
   go(2,3);
   setMode('present');
-  clearSig();
+  resetCanvas();
   MOTIF = null; FILE = null;
   document.querySelectorAll('.motif-chip').forEach(c=>c.classList.remove('on'));
   document.getElementById('secUpload').style.display='none';
@@ -1306,7 +1306,7 @@ function selectSession(sess, el) {
   document.getElementById('dropZone').classList.remove('has-file');
   document.getElementById('fileName').textContent='';
   document.getElementById('fComment').value='';
-  setTimeout(initCanvas,50);
+  setTimeout(initCanvas, 80);
 }
 
 // ═══════════════════════════════════════════
@@ -1320,6 +1320,7 @@ function setMode(mode) {
   document.getElementById('secAbsence').style.display  = mode==='absent' ?'block':'none';
   document.getElementById('step3Icon').textContent  = mode==='present'?'✍️':'📋';
   document.getElementById('step3Title').textContent = mode==='present'?'Signature de présence':'Déclaration d\'absence';
+  if (mode === 'present') setTimeout(initCanvas, 60);
 }
 
 function pickMotif(chip, motif) {
@@ -1340,41 +1341,111 @@ function onFileChange(input) {
 }
 
 // ── Canvas ──
-let drawing=false, lx=0, ly=0;
-function initCanvas() {
-  const cv = document.getElementById('sigCanvas');
-  cv.width  = cv.parentElement.offsetWidth;
-  cv.height = 170;
-  const ctx = cv.getContext('2d');
-  ctx.strokeStyle='#111'; ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round';
-  DRAWN=false;
+// ── Canvas — version stable ──
+let _sigCtx   = null;   // persistent context reference
+let _sigCv    = null;   // persistent canvas reference
+let _drawing  = false;
+let _lx = 0, _ly = 0;
 
-  function pos(e){
-    const r=cv.getBoundingClientRect(), sx=cv.width/r.width, sy=cv.height/r.height;
-    return e.touches
-      ? [(e.touches[0].clientX-r.left)*sx,(e.touches[0].clientY-r.top)*sy]
-      : [(e.clientX-r.left)*sx,(e.clientY-r.top)*sy];
+function _setupCanvas() {
+  _sigCv  = document.getElementById('sigCanvas');
+  const wrapper = _sigCv.parentElement;
+  const dpr     = window.devicePixelRatio || 1;
+  const dispW   = Math.max(wrapper.offsetWidth, 280);
+  const dispH   = 170;
+
+  // Only resize if dimensions actually changed (resizing clears the canvas)
+  const targetW = Math.round(dispW * dpr);
+  const targetH = Math.round(dispH * dpr);
+  if (_sigCv.width !== targetW || _sigCv.height !== targetH) {
+    _sigCv.width        = targetW;
+    _sigCv.height       = targetH;
+    _sigCv.style.width  = dispW + 'px';
+    _sigCv.style.height = dispH + 'px';
   }
-  function start(e){ drawing=true; [lx,ly]=pos(e); document.getElementById('canvasWm').style.display='none'; e.preventDefault(); }
-  function move(e){ if(!drawing)return; const [x,y]=pos(e); ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();lx=x;ly=y;DRAWN=true; e.preventDefault(); }
-  function end(e)  { drawing=false; e.preventDefault(); }
 
-  // Remove old listeners by cloning
-  const nv = cv.cloneNode(true);
-  cv.parentNode.replaceChild(nv, cv);
-  const nc = document.getElementById('sigCanvas');
-  nc.getContext('2d').strokeStyle='#111';
-  nc.getContext('2d').lineWidth=2.2;
-  nc.getContext('2d').lineCap='round';
-  nc.getContext('2d').lineJoin='round';
-  nc.addEventListener('mousedown',start); nc.addEventListener('mousemove',move); nc.addEventListener('mouseup',end); nc.addEventListener('mouseleave',end);
-  nc.addEventListener('touchstart',start,{passive:false}); nc.addEventListener('touchmove',move,{passive:false}); nc.addEventListener('touchend',end,{passive:false});
+  _sigCtx = _sigCv.getContext('2d');
+  _sigCtx.setTransform(1,0,0,1,0,0); // reset transform before scaling
+  _sigCtx.scale(dpr, dpr);
+  _sigCtx.strokeStyle = '#111111';
+  _sigCtx.lineWidth   = 2.5;
+  _sigCtx.lineCap     = 'round';
+  _sigCtx.lineJoin    = 'round';
 }
+
+function _getSigPos(e) {
+  const rect   = _sigCv.getBoundingClientRect();
+  const src    = e.touches ? e.touches[0] : e;
+  return [src.clientX - rect.left, src.clientY - rect.top];
+}
+
+function _onSigStart(e) {
+  e.preventDefault();
+  _drawing = true;
+  [_lx, _ly] = _getSigPos(e);
+  document.getElementById('canvasWm').style.display = 'none';
+}
+
+function _onSigMove(e) {
+  e.preventDefault();
+  if (!_drawing) return;
+  const [x, y] = _getSigPos(e);
+  _sigCtx.beginPath();
+  _sigCtx.moveTo(_lx, _ly);
+  _sigCtx.lineTo(x, y);
+  _sigCtx.stroke();
+  _lx = x; _ly = y;
+  DRAWN = true;
+}
+
+function _onSigEnd(e) {
+  _drawing = false;
+}
+
+// Called once per session selection
+function initCanvas() {
+  _setupCanvas();
+  DRAWN    = false;
+  _drawing = false;
+
+  // Remove previous listeners cleanly via named references
+  _sigCv.removeEventListener('mousedown',  _onSigStart);
+  _sigCv.removeEventListener('mousemove',  _onSigMove);
+  _sigCv.removeEventListener('mouseup',    _onSigEnd);
+  _sigCv.removeEventListener('mouseleave', _onSigEnd);
+  _sigCv.removeEventListener('touchstart', _onSigStart);
+  _sigCv.removeEventListener('touchmove',  _onSigMove);
+  _sigCv.removeEventListener('touchend',   _onSigEnd);
+
+  _sigCv.addEventListener('mousedown',  _onSigStart, false);
+  _sigCv.addEventListener('mousemove',  _onSigMove,  false);
+  _sigCv.addEventListener('mouseup',    _onSigEnd,   false);
+  _sigCv.addEventListener('mouseleave', _onSigEnd,   false);
+  _sigCv.addEventListener('touchstart', _onSigStart, { passive: false });
+  _sigCv.addEventListener('touchmove',  _onSigMove,  { passive: false });
+  _sigCv.addEventListener('touchend',   _onSigEnd,   { passive: false });
+
+  // Also stop drawing if mouse leaves the window entirely
+  document.removeEventListener('mouseup', _onSigEnd);
+  document.addEventListener('mouseup', _onSigEnd, false);
+}
+
 function clearSig() {
-  const cv=document.getElementById('sigCanvas');
-  cv.getContext('2d').clearRect(0,0,cv.width,cv.height);
-  DRAWN=false;
-  document.getElementById('canvasWm').style.display='flex';
+  if (!_sigCv) { _setupCanvas(); }
+  _sigCtx.clearRect(0, 0, _sigCv.width, _sigCv.height);
+  DRAWN = false;
+  document.getElementById('canvasWm').style.display = 'flex';
+}
+
+function resetCanvas() {
+  DRAWN    = false;
+  _drawing = false;
+  if (_sigCv) {
+    if (!_sigCtx) _sigCtx = _sigCv.getContext('2d');
+    _sigCtx.clearRect(0, 0, _sigCv.width, _sigCv.height);
+  }
+  const wm = document.getElementById('canvasWm');
+  if (wm) wm.style.display = 'flex';
 }
 
 // ── Submit ──
@@ -1386,7 +1457,7 @@ async function submitForm() {
   btn.disabled=true; btn.textContent='Enregistrement…';
 
   const sid = sessId(SEL);
-  const sig  = MODE==='present' ? document.getElementById('sigCanvas').toDataURL('image/png') : '';
+  const sig  = MODE==='present' ? (_sigCv || document.getElementById('sigCanvas')).toDataURL('image/png') : '';
   const hasJ = MODE==='absent' && MOTIF!=='Sans justificatif' && !!FILE;
 
   const rec = {
@@ -1469,7 +1540,8 @@ function updateStep(n, state) {
 }
 function resetStudent() {
   CUR={nom:'',numEtudiant:'',prenom:'',employeurEmail:''};
-  SEL=null; MODE='present'; MOTIF=null; FILE=null; DRAWN=false;
+  SEL=null; MODE='present'; MOTIF=null; FILE=null;
+  resetCanvas();
   document.getElementById('fNom').value='';
   document.getElementById('fNum').value='';
   document.getElementById('stepDone').style.display='none';
